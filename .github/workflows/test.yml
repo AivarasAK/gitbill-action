@@ -16,7 +16,7 @@ jobs:
                   hours_per_pr: 1
 
             - name: Upload timesheet
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: timesheet
                   path: |
