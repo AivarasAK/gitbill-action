@@ -1,0 +1,17 @@
+name: "GitBill Action"
+description: "Generate timesheets from merged PRs"
+author: "Aivaras"
+runs:
+    using: "node16"
+    main: "index.js"
+inputs:
+    hours_per_pr:
+        description: "Number of hours to count per merged PR"
+        required: false
+        default: 1
+outputs:
+    timesheet_file:
+        description: "Generated timesheet CSV/JSON file"
+branding:
+    color: "blue"
+    icon: "clock"
