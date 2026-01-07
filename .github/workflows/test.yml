@@ -6,12 +6,14 @@ on:
 jobs:
     run-action:
         runs-on: ubuntu-latest
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # <-- this provides the token automatically
         steps:
             - name: Checkout repo
               uses: actions/checkout@v3
 
             - name: Run GitBill Action
-              uses: ./ # points to your local Action in the repo
+              uses: ./
               with:
                   hours_per_pr: 1
 
