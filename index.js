@@ -5,7 +5,6 @@ const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 
 async function run() {
     try {
-        const hoursPerPR = parseFloat(core.getInput("hours_per_pr")) || 1;
         const token = process.env.GITHUB_TOKEN;
         if (!token) throw new Error("GITHUB_TOKEN not found");
 
@@ -16,7 +15,7 @@ async function run() {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        // Fetch closed PRs
+        // Fetch closed PRs (first 100, can be paginated if needed)
         const {data: prs} = await octokit.rest.pulls.list({
             owner,
             repo,
@@ -35,11 +34,24 @@ async function run() {
             console.log("No merged PRs in the last 7 days");
         }
 
-        // Aggregate hours per author
+        // Aggregate time per author
         const summary = {};
+
         mergedPRs.forEach((pr) => {
             const author = pr.user.login;
-            summary[author] = (summary[author] || 0) + hoursPerPR;
+            const body = pr.body || "";
+
+            // Extract time from {H:MM} format using regex
+            const match = body.match(/\{(\d+):(\d{2})\}/);
+            if (match) {
+                const hours = parseInt(match[1], 10);
+                const minutes = parseInt(match[2], 10);
+                const timeInHours = hours + minutes / 60;
+
+                summary[author] = (summary[author] || 0) + timeInHours;
+            } else {
+                console.warn(`No time found in PR #${pr.number} by ${author}`);
+            }
         });
 
         // Prepare CSV
@@ -51,7 +63,10 @@ async function run() {
             ],
         });
 
-        const records = Object.keys(summary).map((author) => ({author, hours: summary[author]}));
+        const records = Object.keys(summary).map((author) => ({
+            author,
+            hours: summary[author].toFixed(2), // optional rounding
+        }));
         await csvWriter.writeRecords(records);
 
         // Prepare JSON
@@ -65,3 +80,4 @@ async function run() {
 }
 
 run();
+///ja
