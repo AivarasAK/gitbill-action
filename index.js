@@ -15,7 +15,7 @@ async function run() {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        // Fetch closed PRs (first 100, can be paginated if needed)
+        // Fetch closed PRs (first 100)
         const {data: prs} = await octokit.rest.pulls.list({
             owner,
             repo,
@@ -48,25 +48,41 @@ async function run() {
                 const minutes = parseInt(match[2], 10);
                 const timeInHours = hours + minutes / 60;
 
-                summary[author] = (summary[author] || 0) + timeInHours;
+                if (!summary[author]) {
+                    summary[author] = {hoursDecimal: 0, hours: 0, minutes: 0};
+                }
+
+                summary[author].hoursDecimal += timeInHours;
+                summary[author].hours += hours;
+                summary[author].minutes += minutes;
             } else {
                 console.warn(`No time found in PR #${pr.number} by ${author}`);
             }
         });
+
+        // Normalize minutes > 60
+        for (const author in summary) {
+            const totalMinutes = summary[author].minutes;
+            summary[author].hours += Math.floor(totalMinutes / 60);
+            summary[author].minutes = totalMinutes % 60;
+        }
 
         // Prepare CSV
         const csvWriter = createCsvWriter({
             path: "timesheet.csv",
             header: [
                 {id: "author", title: "Author"},
-                {id: "hours", title: "Hours"},
+                {id: "hoursDecimal", title: "Hours"},
+                {id: "hoursHuman", title: "Time"},
             ],
         });
 
         const records = Object.keys(summary).map((author) => ({
             author,
-            hours: summary[author].toFixed(2), // optional rounding
+            hoursDecimal: summary[author].hoursDecimal.toFixed(2),
+            hoursHuman: `${summary[author].hours}h${summary[author].minutes}min`,
         }));
+
         await csvWriter.writeRecords(records);
 
         // Prepare JSON
@@ -80,4 +96,3 @@ async function run() {
 }
 
 run();
-///ja
